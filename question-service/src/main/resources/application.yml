@@ -1,0 +1,39 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: question-service
+  datasource:
+    url: jdbc:h2:mem:questiondb;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASS:guest}
+    listener:
+      simple:
+        default-requeue-rejected: false   # tras agotar reintentos -> Dead Letter Queue
+        retry:
+          enabled: true
+          max-attempts: 3
+          initial-interval: 1000ms
+          multiplier: 2.0
+
+services:
+  user:
+    url: ${USER_SERVICE_URL:http://localhost:8081}
+  validation:
+    url: ${VALIDATION_SERVICE_URL:http://localhost:8082}
+  lifecycle:
+    url: ${LIFECYCLE_SERVICE_URL:http://localhost:8084}

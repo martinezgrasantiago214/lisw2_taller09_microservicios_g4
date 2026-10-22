@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  POM agregador (opcional): permite compilar todos los microservicios con un solo
+  comando "mvn clean package" desde la raíz. Cada microservicio sigue siendo un
+  proyecto Spring Boot autónomo con su propio pom.xml.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>co.edu.unicauca</groupId>
+    <artifactId>lisw2-taller09-microservicios</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+    <name>Taller 09 - Comunicación síncrona y asíncrona (Banco de Preguntas Saber Pro)</name>
+
+    <modules>
+        <module>user-service</module>
+        <module>validation-service</module>
+        <module>question-service</module>
+        <module>lifecycle-service</module>
+        <module>review-service</module>
+        <module>notification-service</module>
+    </modules>
+</project>

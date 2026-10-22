@@ -1,0 +1,1599 @@
+{
+  "info": {
+    "_postman_id": "713135af-b05d-4ec1-ae25-d2cff1d85907",
+    "name": "SaberPro Microservices - Taller 09",
+    "description": "Colección de pruebas del Taller 09 (Laboratorio de Ingeniería de Software II, Unicauca).\nEjecutar en orden con el Collection Runner: las carpetas comparten variables (tokens, ids, operationId).\nRequiere RabbitMQ y los 6 microservicios en ejecución.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. User Service (:8081)",
+      "description": "Autenticación síncrona (POST /auth/login).",
+      "item": [
+        {
+          "name": "1.1 Login docente (credenciales válidas)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{user_service_url}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"docente1\",\n  \"password\": \"docente1123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"authenticated = true y trae roles\", () => { pm.expect(b.authenticated).to.eql(true); pm.expect(b.user.roles).to.include(\"AUTHOR\"); });",
+                  "pm.collectionVariables.set(\"token_docente\", b.token);",
+                  "pm.collectionVariables.set(\"docente_id\", b.user.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.2 Login administrador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{user_service_url}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"Rol ADMIN\", () => pm.expect(b.user.roles).to.include(\"ADMIN\"));",
+                  "pm.collectionVariables.set(\"token_admin\", b.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.3 Login revisor",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{user_service_url}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"revisor1\",\n  \"password\": \"revisor1123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"Rol REVIEWER\", () => pm.expect(b.user.roles).to.include(\"REVIEWER\"));",
+                  "pm.collectionVariables.set(\"token_revisor\", b.token);",
+                  "pm.collectionVariables.set(\"revisor_id\", b.user.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.4 Login con credenciales incorrectas",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{user_service_url}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"docente1\",\n  \"password\": \"claveErrada\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 401\", () => pm.response.to.have.status(401));",
+                  "pm.test(\"Acceso rechazado\", () => pm.expect(pm.response.json().authenticated).to.eql(false));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.5 Validar token (usado por los demás servicios)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_docente}}"
+              }
+            ],
+            "url": "{{user_service_url}}/auth/validate"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Devuelve el usuario del token\", () => pm.expect(pm.response.json().username).to.eql(\"docente1\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.6 Listar revisores",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{user_service_url}}/users?role=REVIEWER"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Hay al menos dos revisores\", () => pm.expect(pm.response.json().length).to.be.at.least(2));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Validation Service (:8082)",
+      "description": "Validación estructural invocada por REST.",
+      "item": [
+        {
+          "name": "2.1 Validar pregunta válida",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{validation_service_url}}/validate",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"¿Qué patrón de diseño permite agregar responsabilidades a un objeto de forma dinámica sin modificar su clase?\",\n  \"options\": [\n    {\n      \"id\": \"A\",\n      \"text\": \"Decorator\"\n    },\n    {\n      \"id\": \"B\",\n      \"text\": \"Singleton\"\n    },\n    {\n      \"id\": \"C\",\n      \"text\": \"Factory Method\"\n    },\n    {\n      \"id\": \"D\",\n      \"text\": \"Template Method\"\n    }\n  ],\n  \"correctOptionId\": \"A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"valid = true\", () => pm.expect(pm.response.json().valid).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.2 Validar pregunta inválida",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{validation_service_url}}/validate",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"¿Pregunta?\",\n  \"options\": [\n    {\n      \"id\": \"A\",\n      \"text\": \"Sí\"\n    },\n    {\n      \"id\": \"B\",\n      \"text\": \"Sí\"\n    },\n    {\n      \"id\": \"C\",\n      \"text\": \"Todas las anteriores\"\n    }\n  ],\n  \"correctOptionId\": \"E\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"valid = false con errores\", () => { pm.expect(b.valid).to.eql(false); pm.expect(b.errors.length).to.be.above(0); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.3 Consultar reglas de validación",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{validation_service_url}}/validate/rules"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Question Service (:8083)",
+      "description": "Creación síncrona y envío a revisión asíncrono (202 Accepted + operationId).",
+      "item": [
+        {
+          "name": "3.1 Crear pregunta válida",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_docente}}"
+              }
+            ],
+            "url": "{{question_service_url}}/questions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"¿Qué patrón de diseño permite agregar responsabilidades a un objeto de forma dinámica sin modificar su clase?\",\n  \"options\": [\n    {\n      \"id\": \"A\",\n      \"text\": \"Decorator\"\n    },\n    {\n      \"id\": \"B\",\n      \"text\": \"Singleton\"\n    },\n    {\n      \"id\": \"C\",\n      \"text\": \"Factory Method\"\n    },\n    {\n      \"id\": \"D\",\n      \"text\": \"Template Method\"\n    }\n  ],\n  \"correctOptionId\": \"A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 201\", () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"Persistida en DRAFT\", () => pm.expect(b.status).to.eql(\"DRAFT\"));",
+                  "pm.collectionVariables.set(\"question_id\", b.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.2 Crear pregunta inválida (la validación falla)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_docente}}"
+              }
+            ],
+            "url": "{{question_service_url}}/questions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"¿Pregunta?\",\n  \"options\": [\n    {\n      \"id\": \"A\",\n      \"text\": \"Sí\"\n    },\n    {\n      \"id\": \"B\",\n      \"text\": \"Sí\"\n    },\n    {\n      \"id\": \"C\",\n      \"text\": \"Todas las anteriores\"\n    }\n  ],\n  \"correctOptionId\": \"E\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 400\", () => pm.response.to.have.status(400));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"Informa los errores\", () => pm.expect(b.errors.length).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.3 Crear pregunta sin token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{question_service_url}}/questions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"¿Qué patrón de diseño permite agregar responsabilidades a un objeto de forma dinámica sin modificar su clase?\",\n  \"options\": [\n    {\n      \"id\": \"A\",\n      \"text\": \"Decorator\"\n    },\n    {\n      \"id\": \"B\",\n      \"text\": \"Singleton\"\n    },\n    {\n      \"id\": \"C\",\n      \"text\": \"Factory Method\"\n    },\n    {\n      \"id\": \"D\",\n      \"text\": \"Template Method\"\n    }\n  ],\n  \"correctOptionId\": \"A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.4 Crear segunda pregunta válida (queda en DRAFT)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_docente}}"
+              }
+            ],
+            "url": "{{question_service_url}}/questions",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"¿Qué estilo arquitectónico organiza el sistema en servicios pequeños, autónomos y desplegables de forma independiente?\",\n  \"options\": [\n    {\n      \"id\": \"A\",\n      \"text\": \"Monolito en capas\"\n    },\n    {\n      \"id\": \"B\",\n      \"text\": \"Microservicios\"\n    },\n    {\n      \"id\": \"C\",\n      \"text\": \"Cliente-servidor de dos capas\"\n    },\n    {\n      \"id\": \"D\",\n      \"text\": \"Tubos y filtros\"\n    }\n  ],\n  \"correctOptionId\": \"B\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"question2_id\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.5 Enviar pregunta a revisión (asíncrono)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_docente}}"
+              }
+            ],
+            "url": "{{question_service_url}}/questions/{{question_id}}/submit"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Espera para dar tiempo al procesamiento asíncrono en RabbitMQ",
+                  "setTimeout(() => {}, 800);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 202\", () => pm.response.to.have.status(202));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"Devuelve operationId y estado PROCESSING\", () => { pm.expect(b.operationId).to.be.a(\"string\"); pm.expect(b.status).to.eql(\"PROCESSING\"); });",
+                  "pm.collectionVariables.set(\"operation_id\", b.operationId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.6 Consultar resultado de la operación",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{question_service_url}}/operations/{{operation_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Consulta en bucle hasta que el procesamiento asíncrono termine (máx. 20 intentos x 500 ms).",
+                  "// postman.setNextRequest solo tiene efecto en el Collection Runner o en Newman.",
+                  "const key = \"poll_\" + pm.info.requestName;",
+                  "const attempt = Number(pm.collectionVariables.get(key) || 0);",
+                  "const pending = pm.response.code === 200 && pm.response.json().status === \"PROCESSING\";",
+                  "if (pending && attempt < 20) {",
+                  "    pm.collectionVariables.set(key, attempt + 1);",
+                  "    console.log(\"3.6: aún en proceso, reintento \" + (attempt + 1));",
+                  "    setTimeout(() => {}, 500);",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "    pm.collectionVariables.unset(key);",
+                  "    pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "    const b = pm.response.json();",
+                  "    pm.test(\"Transición completada a PENDING_REVIEW\", () => { pm.expect(b.status).to.eql(\"COMPLETED\"); pm.expect(b.resultingState).to.eql(\"PENDING_REVIEW\"); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.7 Reenviar la misma pregunta a revisión (fallará en el Lifecycle)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_docente}}"
+              }
+            ],
+            "url": "{{question_service_url}}/questions/{{question_id}}/submit"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.test(\"La solicitud se acepta, aún no se sabe el resultado\", () => pm.expect(pm.response.json().status).to.eql(\"PROCESSING\"));",
+                  "pm.collectionVariables.set(\"operation_id_fail\", pm.response.json().operationId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.8 Consultar operación fallida",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{question_service_url}}/operations/{{operation_id_fail}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Consulta en bucle hasta que el procesamiento asíncrono termine (máx. 20 intentos x 500 ms).",
+                  "// postman.setNextRequest solo tiene efecto en el Collection Runner o en Newman.",
+                  "const key = \"poll_\" + pm.info.requestName;",
+                  "const attempt = Number(pm.collectionVariables.get(key) || 0);",
+                  "const pending = pm.response.code === 200 && pm.response.json().status === \"PROCESSING\";",
+                  "if (pending && attempt < 20) {",
+                  "    pm.collectionVariables.set(key, attempt + 1);",
+                  "    console.log(\"3.8: aún en proceso, reintento \" + (attempt + 1));",
+                  "    setTimeout(() => {}, 500);",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "    pm.collectionVariables.unset(key);",
+                  "    pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "    const b = pm.response.json();",
+                  "    pm.test(\"No se informa falsamente que se completó\", () => { pm.expect(b.status).to.eql(\"FAILED\"); pm.expect(b.message).to.include(\"no permitida\"); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.9 Consultar pregunta",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{question_service_url}}/questions/{{question_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Proyección de estado = PENDING_REVIEW\", () => pm.expect(pm.response.json().status).to.eql(\"PENDING_REVIEW\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.10 Consultar operación inexistente",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{question_service_url}}/operations/no-existe"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Lifecycle Service (:8084)",
+      "description": "Autoridad sobre estados y transiciones.",
+      "item": [
+        {
+          "name": "4.1 Consultar estado de la pregunta",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{lifecycle_service_url}}/lifecycle/{{question_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Estado PENDING_REVIEW\", () => pm.expect(pm.response.json().state).to.eql(\"PENDING_REVIEW\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.2 Aprobar una pregunta en DRAFT",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lifecycle_service_url}}/lifecycle/{{question2_id}}/transition",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetState\": \"APPROVED\",\n  \"changedBy\": \"admin\",\n  \"comment\": \"Intento inválido\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Transición rechazada\", () => pm.expect(pm.response.json().message).to.include(\"DRAFT -> APPROVED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.3 Resultado de la operación registrado en Lifecycle",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{lifecycle_service_url}}/lifecycle/operations/{{operation_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"COMPLETED\", () => pm.expect(pm.response.json().status).to.eql(\"COMPLETED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.4 Transición a un estado desconocido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{lifecycle_service_url}}/lifecycle/{{question2_id}}/transition",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetState\": \"ARCHIVADA\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Review Service (:8085)",
+      "description": "Asignación de revisor (saga con compensación) y dictamen.",
+      "item": [
+        {
+          "name": "5.1 Asignar revisor a pregunta no elegible (DRAFT)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": "{{review_service_url}}/reviews/assign",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questionId\": \"{{question2_id}}\",\n  \"reviewerId\": \"{{revisor_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.2 Asignar un usuario sin rol REVIEWER",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": "{{review_service_url}}/reviews/assign",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questionId\": \"{{question_id}}\",\n  \"reviewerId\": \"{{docente_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 422\", () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.3 Asignar revisor sin ser administrador",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_docente}}"
+              }
+            ],
+            "url": "{{review_service_url}}/reviews/assign",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questionId\": \"{{question_id}}\",\n  \"reviewerId\": \"{{revisor_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.4 Asignar revisor a pregunta elegible",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": "{{review_service_url}}/reviews/assign",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questionId\": \"{{question_id}}\",\n  \"reviewerId\": \"{{revisor_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 201\", () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"Asignación registrada y pregunta IN_REVIEW\", () => { pm.expect(b.status).to.eql(\"ASSIGNED\"); pm.expect(b.questionState).to.eql(\"IN_REVIEW\"); pm.expect(b.notificationQueued).to.eql(true); });",
+                  "pm.collectionVariables.set(\"assignment_id\", b.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.5 Asignar otra vez la misma pregunta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": "{{review_service_url}}/reviews/assign",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questionId\": \"{{question_id}}\",\n  \"reviewerId\": \"{{revisor_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.6 Rechazar sin motivo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_revisor}}"
+              }
+            ],
+            "url": "{{review_service_url}}/reviews/assignments/{{assignment_id}}/decision",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"result\": \"REJECTED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.7 Rechazar una pregunta en IN_REVIEW",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_revisor}}"
+              }
+            ],
+            "url": "{{review_service_url}}/reviews/assignments/{{assignment_id}}/decision",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"result\": \"REJECTED\",\n  \"comments\": \"La opción C es ambigua y el enunciado no indica el contexto de uso del patrón.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Estado REJECTED\", () => pm.expect(pm.response.json().questionState).to.eql(\"REJECTED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.8 Consultar asignaciones de la pregunta",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{review_service_url}}/reviews/assignments?questionId={{question_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Notification Service (:8086)",
+      "description": "Verificación de los eventos consumidos de forma asíncrona.",
+      "item": [
+        {
+          "name": "6.1 Notificación generada al revisor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{notification_service_url}}/notifications?recipientId={{revisor_id}}&type=REVIEWER_ASSIGNED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Consulta en bucle hasta que el procesamiento asíncrono termine (máx. 20 intentos x 500 ms).",
+                  "// postman.setNextRequest solo tiene efecto en el Collection Runner o en Newman.",
+                  "const key = \"poll_\" + pm.info.requestName;",
+                  "const attempt = Number(pm.collectionVariables.get(key) || 0);",
+                  "const pending = pm.response.code === 200 && !pm.response.json().some(x => x.questionId == pm.collectionVariables.get(\"question_id\") && x.status === \"SENT\");",
+                  "if (pending && attempt < 20) {",
+                  "    pm.collectionVariables.set(key, attempt + 1);",
+                  "    console.log(\"6.1: aún en proceso, reintento \" + (attempt + 1));",
+                  "    setTimeout(() => {}, 500);",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "    pm.collectionVariables.unset(key);",
+                  "    pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "    const b = pm.response.json();",
+                  "    pm.test(\"Hay una notificación REVIEWER_ASSIGNED enviada\", () => { const n = b.find(x => x.questionId == pm.collectionVariables.get(\"question_id\")); pm.expect(n).to.exist; pm.expect(n.status).to.eql(\"SENT\"); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.2 Notificación de rechazo al autor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{notification_service_url}}/notifications?recipientId={{docente_id}}&type=QUESTION_REJECTED"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Espera para dar tiempo al procesamiento asíncrono en RabbitMQ",
+                  "setTimeout(() => {}, 2000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"El autor fue notificado del rechazo\", () => pm.expect(pm.response.json().length).to.be.at.least(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.3 Notificaciones de validación fallida",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{notification_service_url}}/notifications?type=VALIDATION_FAILED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Se registró el intento inválido\", () => pm.expect(pm.response.json().length).to.be.at.least(1));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.4 Todas las notificaciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{notification_service_url}}/notifications"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Flujo de corrección (Question + Lifecycle)",
+      "description": "Corregir una pregunta rechazada y volver a enviarla a revisión.",
+      "item": [
+        {
+          "name": "7.1 Estado REJECTED con motivo registrado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{lifecycle_service_url}}/lifecycle/{{question_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"REJECTED y motivo guardado\", () => { pm.expect(b.state).to.eql(\"REJECTED\"); pm.expect(b.comment).to.include(\"ambigua\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.2 Corregir la pregunta rechazada",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_docente}}"
+              }
+            ],
+            "url": "{{question_service_url}}/questions/{{question_id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"¿Qué patrón de diseño permite añadir responsabilidades a un objeto en tiempo de ejecución envolviéndolo, sin modificar su clase original?\",\n  \"options\": [\n    {\n      \"id\": \"A\",\n      \"text\": \"Decorator\"\n    },\n    {\n      \"id\": \"B\",\n      \"text\": \"Singleton\"\n    },\n    {\n      \"id\": \"C\",\n      \"text\": \"Abstract Factory\"\n    },\n    {\n      \"id\": \"D\",\n      \"text\": \"Memento\"\n    }\n  ],\n  \"correctOptionId\": \"A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Vuelve a DRAFT\", () => pm.expect(pm.response.json().status).to.eql(\"DRAFT\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.3 Reenviar a revisión tras la corrección",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_docente}}"
+              }
+            ],
+            "url": "{{question_service_url}}/questions/{{question_id}}/submit"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Espera para dar tiempo al procesamiento asíncrono en RabbitMQ",
+                  "setTimeout(() => {}, 500);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.collectionVariables.set(\"operation_id_resubmit\", pm.response.json().operationId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.4 Consultar la operación de reenvío",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{question_service_url}}/operations/{{operation_id_resubmit}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Consulta en bucle hasta que el procesamiento asíncrono termine (máx. 20 intentos x 500 ms).",
+                  "// postman.setNextRequest solo tiene efecto en el Collection Runner o en Newman.",
+                  "const key = \"poll_\" + pm.info.requestName;",
+                  "const attempt = Number(pm.collectionVariables.get(key) || 0);",
+                  "const pending = pm.response.code === 200 && pm.response.json().status === \"PROCESSING\";",
+                  "if (pending && attempt < 20) {",
+                  "    pm.collectionVariables.set(key, attempt + 1);",
+                  "    console.log(\"7.4: aún en proceso, reintento \" + (attempt + 1));",
+                  "    setTimeout(() => {}, 500);",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "    pm.collectionVariables.unset(key);",
+                  "    pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "    const b = pm.response.json();",
+                  "    pm.test(\"Puede volver al proceso de revisión\", () => { pm.expect(b.status).to.eql(\"COMPLETED\"); pm.expect(b.resultingState).to.eql(\"PENDING_REVIEW\"); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.5 Corregir una pregunta que está en revisión",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_docente}}"
+              }
+            ],
+            "url": "{{question_service_url}}/questions/{{question_id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"¿Qué patrón de diseño permite añadir responsabilidades a un objeto en tiempo de ejecución envolviéndolo, sin modificar su clase original?\",\n  \"options\": [\n    {\n      \"id\": \"A\",\n      \"text\": \"Decorator\"\n    },\n    {\n      \"id\": \"B\",\n      \"text\": \"Singleton\"\n    },\n    {\n      \"id\": \"C\",\n      \"text\": \"Abstract Factory\"\n    },\n    {\n      \"id\": \"D\",\n      \"text\": \"Memento\"\n    }\n  ],\n  \"correctOptionId\": \"A\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 409\", () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "7.6 Historial de transiciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{lifecycle_service_url}}/lifecycle/{{question_id}}/history"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"DRAFT→PENDING_REVIEW→IN_REVIEW→REJECTED→DRAFT→PENDING_REVIEW\", () => pm.expect(pm.response.json().map(h => h.toState)).to.eql([\"DRAFT\",\"PENDING_REVIEW\",\"IN_REVIEW\",\"REJECTED\",\"DRAFT\",\"PENDING_REVIEW\"]));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "8. Flujo de aprobación (Question + Review + Lifecycle + Notification)",
+      "item": [
+        {
+          "name": "8.1 Enviar la segunda pregunta a revisión",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_docente}}"
+              }
+            ],
+            "url": "{{question_service_url}}/questions/{{question2_id}}/submit"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 202\", () => pm.response.to.have.status(202));",
+                  "pm.collectionVariables.set(\"operation_id_q2\", pm.response.json().operationId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.2 Consultar la operación de la segunda pregunta",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{question_service_url}}/operations/{{operation_id_q2}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Consulta en bucle hasta que el procesamiento asíncrono termine (máx. 20 intentos x 500 ms).",
+                  "// postman.setNextRequest solo tiene efecto en el Collection Runner o en Newman.",
+                  "const key = \"poll_\" + pm.info.requestName;",
+                  "const attempt = Number(pm.collectionVariables.get(key) || 0);",
+                  "const pending = pm.response.code === 200 && pm.response.json().status === \"PROCESSING\";",
+                  "if (pending && attempt < 20) {",
+                  "    pm.collectionVariables.set(key, attempt + 1);",
+                  "    console.log(\"8.2: aún en proceso, reintento \" + (attempt + 1));",
+                  "    setTimeout(() => {}, 500);",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "    pm.collectionVariables.unset(key);",
+                  "    pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "    const b = pm.response.json();",
+                  "    pm.test(\"Transición completada a PENDING_REVIEW\", () => { pm.expect(b.status).to.eql(\"COMPLETED\"); pm.expect(b.resultingState).to.eql(\"PENDING_REVIEW\"); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.3 Asignar revisor a la segunda pregunta",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_admin}}"
+              }
+            ],
+            "url": "{{review_service_url}}/reviews/assign",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"questionId\": \"{{question2_id}}\",\n  \"reviewerId\": \"{{revisor_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 201\", () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"Asignación ASSIGNED y pregunta IN_REVIEW\", () => { pm.expect(b.status).to.eql(\"ASSIGNED\"); pm.expect(b.questionState).to.eql(\"IN_REVIEW\"); });",
+                  "pm.collectionVariables.set(\"assignment2_id\", b.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.4 Aprobar la pregunta sin observaciones",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_revisor}}"
+              }
+            ],
+            "url": "{{review_service_url}}/reviews/assignments/{{assignment2_id}}/decision",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"result\": \"APPROVED\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 201 (aprobar no exige comments)\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Estado APPROVED\", () => pm.expect(pm.response.json().questionState).to.eql(\"APPROVED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.5 Estado APPROVED en el Lifecycle",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{lifecycle_service_url}}/lifecycle/{{question2_id}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"APPROVED\", () => pm.expect(pm.response.json().state).to.eql(\"APPROVED\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "8.6 Notificación de aprobación al autor",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{notification_service_url}}/notifications?recipientId={{docente_id}}&type=QUESTION_APPROVED"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Consulta en bucle hasta que el procesamiento asíncrono termine (máx. 20 intentos x 500 ms).",
+                  "// postman.setNextRequest solo tiene efecto en el Collection Runner o en Newman.",
+                  "const key = \"poll_\" + pm.info.requestName;",
+                  "const attempt = Number(pm.collectionVariables.get(key) || 0);",
+                  "const pending = pm.response.code === 200 && !pm.response.json().some(x => x.questionId == pm.collectionVariables.get(\"question2_id\"));",
+                  "if (pending && attempt < 20) {",
+                  "    pm.collectionVariables.set(key, attempt + 1);",
+                  "    console.log(\"8.6: aún en proceso, reintento \" + (attempt + 1));",
+                  "    setTimeout(() => {}, 500);",
+                  "    postman.setNextRequest(pm.info.requestName);",
+                  "} else {",
+                  "    pm.collectionVariables.unset(key);",
+                  "    pm.test(\"Código HTTP 200\", () => pm.response.to.have.status(200));",
+                  "    pm.test(\"El autor fue notificado de la aprobación\", () => pm.expect(pm.response.json().some(x => x.questionId == pm.collectionVariables.get(\"question2_id\"))).to.eql(true));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "user_service_url",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "validation_service_url",
+      "value": "http://localhost:8082"
+    },
+    {
+      "key": "question_service_url",
+      "value": "http://localhost:8083"
+    },
+    {
+      "key": "lifecycle_service_url",
+      "value": "http://localhost:8084"
+    },
+    {
+      "key": "review_service_url",
+      "value": "http://localhost:8085"
+    },
+    {
+      "key": "notification_service_url",
+      "value": "http://localhost:8086"
+    },
+    {
+      "key": "token_docente",
+      "value": ""
+    },
+    {
+      "key": "token_admin",
+      "value": ""
+    },
+    {
+      "key": "token_revisor",
+      "value": ""
+    },
+    {
+      "key": "docente_id",
+      "value": ""
+    },
+    {
+      "key": "revisor_id",
+      "value": ""
+    },
+    {
+      "key": "question_id",
+      "value": ""
+    },
+    {
+      "key": "question2_id",
+      "value": ""
+    },
+    {
+      "key": "operation_id",
+      "value": ""
+    },
+    {
+      "key": "operation_id_fail",
+      "value": ""
+    },
+    {
+      "key": "operation_id_resubmit",
+      "value": ""
+    },
+    {
+      "key": "assignment_id",
+      "value": ""
+    },
+    {
+      "key": "operation_id_q2",
+      "value": ""
+    },
+    {
+      "key": "assignment2_id",
+      "value": ""
+    }
+  ]
+}

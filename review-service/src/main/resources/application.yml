@@ -1,0 +1,34 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: review-service
+  datasource:
+    url: jdbc:h2:mem:reviewdb;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASS:guest}
+
+services:
+  user:
+    url: ${USER_SERVICE_URL:http://localhost:8081}
+  question:
+    url: ${QUESTION_SERVICE_URL:http://localhost:8083}
+  lifecycle:
+    url: ${LIFECYCLE_SERVICE_URL:http://localhost:8084}
+
+review:
+  reconcile-interval-ms: 30000   # reconciliación de asignaciones PENDING con el Lifecycle Service

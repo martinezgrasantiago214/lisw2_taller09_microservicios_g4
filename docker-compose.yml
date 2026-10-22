@@ -1,0 +1,18 @@
+# Infraestructura del Taller 09: RabbitMQ con consola de administración.
+# Levantar con:  docker compose up -d
+# Consola web:   http://localhost:15672  (guest / guest)
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: saberpro-rabbitmq
+    ports:
+      - "5672:5672"     # AMQP (microservicios)
+      - "15672:15672"   # Consola web de administración
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
